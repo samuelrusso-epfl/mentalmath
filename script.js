@@ -23,6 +23,24 @@ let activeQuestions = [];
 let currentElement = null;
 let currentAnswer = null;
 
+// Difficulty to SPM (squats per minutes) mapping
+const spmByLevel = {
+    easy: 20,
+    medium: 35,
+    hard: 60
+};
+
+const baseFallingDurationByLevel = {
+    easy: 20,
+    medium: 10,
+    hard: 5
+};  
+
+const variableFallingDurationByLevel = {
+    easy: 5,
+    medium: 4,
+    hard: 3
+};  
 
 document.querySelectorAll('.difficulty').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -80,7 +98,7 @@ function spawnQuestion(level) {
     }
 
     // auto remove after duration
-    const duration = Math.random() * 4 + 3;
+    const duration = Math.random() * variableFallingDurationByLevel[level] + baseFallingDurationByLevel[level];
     el.style.animationDuration = `${duration}s`;
 
     setTimeout(() => {
@@ -108,6 +126,17 @@ function pickNext() {
 
 answerInput.addEventListener('input', () => {
     const raw = answerInput.value.trim();
+
+    // limit to 2 digits for easy + medium
+    if (currentDifficulty === 'easy' || currentDifficulty === 'medium') {
+        const digits = raw.replace(/[^\d]/g, '');
+        if (digits.length > 2) {
+            answerInput.value = '';
+            skipCurrentQuestion();
+            return;
+        }
+    }
+
     const intRegex = /^[+-]?\d+$/;
     if (!intRegex.test(raw)) return;
 
@@ -119,7 +148,6 @@ answerInput.addEventListener('input', () => {
         answerInput.classList.add('bg-emerald-200');
         setTimeout(() => answerInput.classList.remove('bg-emerald-200'), 120);
 
-        // remove current from DOM & list
         if (currentElement) {
             currentElement.style.opacity = '0.4';
             currentElement.classList.remove('current');
@@ -127,7 +155,6 @@ answerInput.addEventListener('input', () => {
             currentElement.remove();
         }
 
-        // 🔹 If player answered *everything* and is waiting, spawn a new one immediately
         if (activeQuestions.length === 0 && timeLeft > 0) {
             spawnQuestion(currentDifficulty);
         }
@@ -136,15 +163,37 @@ answerInput.addEventListener('input', () => {
     }
 });
 
+
+function skipCurrentQuestion() {
+    if (currentElement) {
+        // fade out + unmark current
+        currentElement.style.opacity = '0.4';
+        currentElement.classList.remove('current');
+
+        // remove from active list + DOM
+        activeQuestions = activeQuestions.filter(q => q !== currentElement);
+        currentElement.remove();
+    }
+
+    // if all cleared: spawn a new one immediately
+    if (activeQuestions.length === 0 && timeLeft > 0) {
+        spawnQuestion(currentDifficulty);
+    }
+
+    // pick next
+    pickNext();
+}
+
+
 function generateQuestion(level) {
     const rand = max => Math.floor(Math.random() * max);
 
     let a, b, question, answer;
 
     if (level === 'easy') {
-        // integers 1–15
-        let a = rand(15) + 1;
-        let b = rand(15) + 1;
+        // integers 1–10
+        let a = rand(10) + 1;
+        let b = rand(10) + 1;
 
         // enforce: at most one operand ≥10
         if (a >= 10 && b >= 10) {
@@ -185,43 +234,42 @@ function generateQuestion(level) {
         const randBetween = (min, max) =>
             Math.floor(Math.random() * (max - min + 1)) + min;
 
-        const op = ['+', '-', '×', '÷'][Math.floor(Math.random() * 4)];
+        const op = ['+', '-', '×'][Math.floor(Math.random() * 3)];
 
         switch (op) {
             case '+': {
-                const a = randBetween(0, 50);
-                const b = randBetween(0, 50);
+                const a = randBetween(0, 30);
+                const b = randBetween(0, 30);
+                        
+                // enforce: at most one operand ≥10
+                if (a >= 10 && b >= 10) {
+                    // force b to be single digit
+                    b = rand(9) + 1;  // 1–9
+                }
+
                 question = `${a} + ${b}`;
                 answer = a + b;
                 break;
             }
 
             case '-': {
-                const a = randBetween(0, 50);
-                const b = randBetween(0, 50);
+                const a = randBetween(0, 15);
+                const b = randBetween(0, 15);
                 question = `${a} - ${b}`;
                 answer = a - b; // may be negative
                 break;
             }
 
             case '×': {
-                // single-digit × single-digit (up to 12×12)
-                const a = randBetween(2, 12);
-                const b = randBetween(2, 12);
+                // single-digit × single-digit (up to 7×7)
+                const a = randBetween(2, 7);
+                const b = randBetween(2, 7);
                 question = `${a} × ${b}`;
                 answer = a * b;
                 break;
             }
 
-            case '÷': {
-                // ensure clean integer result and both sides ≤ 2 digits
-                const divisor = randBetween(2, 12);
-                const quotient = randBetween(2, 12);
-                const dividend = divisor * quotient;
-                question = `${dividend} / ${divisor}`;
-                answer = quotient;
-                break;
-            }
+            
         }
     }
 
@@ -248,11 +296,12 @@ function generateQuestion(level) {
                 answer = a * b;
                 break;
             case '÷':
-                // keep integer division if possible
-                answer = rand(21) - 10;
-                b = rand(10) + 1;
-                a = answer * b;
-                question = `${a} ÷ ${b}`;
+                // ensure clean integer result and both sides ≤ 2 digits
+                const divisor = randBetween(2, 7);
+                const quotient = randBetween(2, 7);
+                const dividend = divisor * quotient;
+                question = `${dividend} / ${divisor}`;
+                answer = quotient;
                 break;
         }
     }
@@ -264,32 +313,10 @@ function generateQuestion(level) {
 answerInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
-
-        // clear input field
         answerInput.value = '';
-
-        if (currentElement) {
-            // fade out
-            currentElement.style.opacity = '0.4';
-            currentElement.classList.remove('current');
-
-            // remove from active list
-            activeQuestions = activeQuestions.filter(q => q !== currentElement);
-
-            // remove from DOM
-            currentElement.remove();
-        }
-
-        // if all cleared: spawn a new one immediately
-        if (activeQuestions.length === 0 && timeLeft > 0) {
-            spawnQuestion(currentDifficulty);
-        }
-
-        // pick next
-        pickNext();
+        skipCurrentQuestion();
     }
 });
-
 
 
 function updateScore() {
@@ -326,7 +353,7 @@ function updateScoreboard() {
     scoreboardDiv.classList.remove('hidden');
     scoreList.innerHTML = previousScores
         .map(s =>
-            `<li>${s.time} – <span class="text-epflRed">${s.level}</span> (${s.timer}s): ${s.score} pts</li>`
+            `<li><span class="text-epflRed font-bold">${s.level}</span> (${s.timer}s): ${s.score} pts</li>`
         )
         .join('');
 }
@@ -340,7 +367,6 @@ const squatMenu = document.getElementById('squat-menu');
 const squatGame = document.getElementById('squat-game');
 const squatTimerSetting = document.getElementById('squat-timer-setting');
 const squatTimerDisplay = document.getElementById('squat-timer-display');
-const squatBeatDisplay = document.getElementById('squat-beat-display');
 const squatCue = document.getElementById('squat-cue');
 const squatScoreboardDiv = document.getElementById('squat-scoreboard');
 const squatScoreList = document.getElementById('squat-score-list');
@@ -365,18 +391,13 @@ logo.addEventListener('click', () => {
     }
 });
 
-// Difficulty to BPM mapping
-const bpmByLevel = {
-    easy: 20,
-    medium: 35,
-    hard: 50
-};
+
 
 document.querySelectorAll('.squat-difficulty').forEach(btn => {
     btn.addEventListener('click', () => {
         squatCurrentDifficulty = btn.dataset.level;
         squatCurrentTimerLength = parseInt(squatTimerSetting.value, 10) || 60;
-        squatBPM = bpmByLevel[squatCurrentDifficulty];
+        squatBPM = spmByLevel[squatCurrentDifficulty] * 2;
         startSquatGame();
     });
 });
@@ -390,7 +411,6 @@ function startSquatGame() {
     squatTimeLeft = squatCurrentTimerLength;
     squatCount = 0;
     updateSquatTimer();
-    updateSquatBeat();
 
     // Show ready message
     squatCue.textContent = 'Prêt';
@@ -430,9 +450,7 @@ function updateSquatTimer() {
     squatTimerDisplay.textContent = `Temps: ${squatTimeLeft}`;
 }
 
-function updateSquatBeat() {
-    squatBeatDisplay.textContent = `Rythme: ${squatBPM} BPM`;
-}
+
 
 function endSquatGame() {
     clearInterval(squatInterval);
@@ -467,7 +485,7 @@ function updateSquatScoreboard() {
     squatScoreboardDiv.classList.remove('hidden');
     squatScoreList.innerHTML = squatPreviousScores
         .map(s =>
-            `<li>${s.time} – <span class="text-epflRed">${s.level}</span> (${s.timer}s, ${s.bpm} BPM): ${s.squats} squats</li>`
+            `<li><span class="text-epflRed">${s.level}</span> (${s.timer}s): ${s.squats} squats</li>`
         )
         .join('');
 }
