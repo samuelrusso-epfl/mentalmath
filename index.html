@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EPFL Maths Rapidité</title>
+    <title>Des maths ou des squats</title>
     <link rel="icon" href="favicon.ico">
+    <meta name="theme-color" content="#E2001A">
 
     <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,40 +26,104 @@
     <link rel="stylesheet" href="style.css" />
 </head>
 
-<body class="bg-epflBlack text-white flex flex-col items-center justify-center h-screen font-sans">
+<body class="bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white flex flex-col items-center justify-center min-h-screen font-sans p-6">
 
     <!-- Title -->
-    <h1 class="text-4xl font-bold text-epflRed mb-2">EPFL Maths Rapidité</h1>
+    <h1 id="title" class="text-5xl font-bold text-epflRed mb-12 text-center tracking-tight z-10">Des maths ou des squats</h1>
 
-    <!-- Timer setting -->
+    <!-- EPFL Logo -->
+    <img src="logo.svg" id="logo" alt="EPFL Logo" class="absolute top-4 left-4 h-6 md:h-8 w-auto" />
     
-    <!-- Menu -->
-    <div id="menu" class="flex flex-col items-center space-y-6">
-        <div class="flex flex-col items-center mt-2">
-            <label for="timer-setting" class="text-lg mb-1">Timer (secondes)</label>
-            <input id="timer-setting" type="number" min="10" max="120" value="30"
-            class="text-center p-2 rounded text-epflBlack" />
-        </div>
-        <div class="space-x-4">
-            <button class="difficulty bg-epflRed hover:bg-red-700 px-4 py-2 rounded" data-level="easy">Facile</button>
-            <button class="difficulty bg-epflRed hover:bg-red-700 px-4 py-2 rounded" data-level="medium">Moyen</button>
-            <button class="difficulty bg-epflRed hover:bg-red-700 px-4 py-2 rounded"
-                data-level="hard">Difficile</button>
+    <!-- Menus container: left = maths, right = squats -->
+    <div id="menu"
+         class="flex flex-col md:flex-row w-full max-w-6xl gap-6 items-stretch justify-center">
+
+        <!-- Maths app (existing) -->
+        <div id="math-menu"
+             class="flex-1 flex flex-col items-center space-y-8 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl">
+            <h2 class="text-3xl font-bold text-epflRed">Jeu de maths</h2>
+
+            <div class="flex flex-col items-center w-full">
+                <label for="timer-setting" class="text-sm font-medium text-gray-300 mb-2 uppercase tracking-wide">Timer (secondes)</label>
+                <input id="timer-setting" type="number" min="10" max="120" value="30"
+                       class="text-center p-3 rounded-lg bg-gray-700 text-white w-32 text-xl font-semibold border-2 border-gray-600 focus:border-epflRed focus:outline-none transition" />
+            </div>
+
+            <div class="flex flex-wrap gap-3 justify-center">
+                <button class="difficulty bg-epflRed hover:bg-red-600 px-6 py-3 rounded-lg font-semibold text-lg transition-all hover:scale-105 active:scale-95" data-level="easy">
+                    Facile
+                </button>
+                <button class="difficulty bg-epflRed hover:bg-red-600 px-6 py-3 rounded-lg font-semibold text-lg transition-all hover:scale-105 active:scale-95" data-level="medium">
+                    Moyen
+                </button>
+                <button class="difficulty bg-epflRed hover:bg-red-600 px-6 py-3 rounded-lg font-semibold text-lg transition-all hover:scale-105 active:scale-95" data-level="hard">
+                    Difficile
+                </button>
+            </div>
+
+            <div id="scoreboard" class="mt-8 hidden w-full">
+                <h3 class="text-2xl text-epflRed mb-4 font-bold text-center">Derniers scores</h3>
+                <ul id="score-list" class="space-y-2 text-lg text-center"></ul>
+            </div>
         </div>
 
-        <div id="scoreboard" class="mt-6 hidden">
-            <h3 class="text-2xl text-epflRed mb-2 font-semibold">Derniers scores</h3>
-            <ul id="score-list" class="space-y-1 text-lg text-center"></ul>
+        <!-- Squats app (new) -->
+        <div id="squat-menu"
+             class="flex-1 flex flex-col items-center space-y-8 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl">
+            <h2 class="text-3xl font-bold text-epflRed">Timer de squats</h2>
+
+            <div class="flex flex-col items-center w-full">
+                <label for="squat-timer-setting" class="text-sm font-medium text-gray-300 mb-2 uppercase tracking-wide">Timer (secondes)</label>
+                <input id="squat-timer-setting" type="number" min="10" max="120" value="30"
+                       class="text-center p-3 rounded-lg bg-gray-700 text-white w-32 text-xl font-semibold border-2 border-gray-600 focus:border-epflRed focus:outline-none transition" />
+            </div>
+
+            <div class="flex flex-wrap gap-3 justify-center">
+                <button class="squat-difficulty bg-epflRed hover:bg-red-600 px-6 py-3 rounded-lg font-semibold text-lg transition-all hover:scale-105 active:scale-95" data-level="easy">
+                    Facile
+                </button>
+                <button class="squat-difficulty bg-epflRed hover:bg-red-600 px-6 py-3 rounded-lg font-semibold text-lg transition-all hover:scale-105 active:scale-95" data-level="medium">
+                    Moyen
+                </button>
+                <button class="squat-difficulty bg-epflRed hover:bg-red-600 px-6 py-3 rounded-lg font-semibold text-lg transition-all hover:scale-105 active:scale-95" data-level="hard">
+                    Difficile
+                </button>
+            </div>
+
+            <div id="squat-scoreboard" class="mt-8 hidden w-full">
+                <h3 class="text-2xl text-epflRed mb-4 font-bold text-center">Derniers scores</h3>
+                <ul id="squat-score-list" class="space-y-2 text-lg text-center"></ul>
+            </div>
         </div>
-    
+    </div>
+    <!-- Game Area: maths -->
+    <div id="game" class="hidden relative w-full max-w-5xl flex-1 border border-white/10 rounded-2xl overflow-hidden bg-black/40">
+        <div id="score" class="absolute top-4 left-4 text-base md:text-lg font-medium bg-black/60 px-3 py-1 rounded-full">
+            Score: 0
+        </div>
+        <div id="timer" class="absolute top-4 right-4 text-base md:text-lg font-medium bg-black/60 px-3 py-1 rounded-full">
+            Temps: 30
+        </div>
+        <input id="answer" type="number" placeholder="Tape ta réponse..."
+               class="absolute bottom-6 left-1/2 -translate-x-1/2 w-56 md:w-72 px-4 py-2.5 rounded-full bg-white text-black text-xl shadow-md focus:outline-none focus:ring-2 focus:ring-epflRed" />
     </div>
 
-    <!-- Game Area -->
-    <div id="game" class="hidden relative w-full h-full overflow-hidden">
-        <div id="score" class="absolute top-4 left-4 text-xl">Score: 0</div>
-        <div id="timer" class="absolute top-4 right-4 text-xl">Temps: 30</div>
-        <input id="answer" type="number" placeholder="Type answer..."
-            class="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-48 p-2 text-black rounded" />
+    <!-- Game Area: squats -->
+    <div id="squat-game"
+         class="hidden relative w-full max-w-5xl flex-1 mt-8 border border-white/10 rounded-2xl overflow-hidden bg-black/40">
+        <div id="squat-timer-display"
+             class="absolute top-4 right-4 text-base md:text-lg font-medium bg-black/60 px-3 py-1 rounded-full">
+            Temps: 60
+        </div>
+        <div id="squat-beat-display"
+             class="absolute top-4 left-4 text-base md:text-lg font-medium bg-black/60 px-3 py-1 rounded-full">
+            Rythme: 40 BPM
+        </div>
+
+        <div id="squat-cue"
+             class="absolute inset-0 flex items-center justify-center text-4xl md:text-5xl font-extrabold text-epflRed">
+            Prêt
+        </div>
     </div>
 
     <script src="script.js"></script>

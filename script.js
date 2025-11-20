@@ -1,4 +1,5 @@
 const menu = document.getElementById('menu');
+const title = document.getElementById('title');
 const game = document.getElementById('game');
 const answerInput = document.getElementById('answer');
 const scoreDisplay = document.getElementById('score');
@@ -9,6 +10,7 @@ const restartBtn = document.getElementById('restart');
 const timerSetting = document.getElementById('timer-setting');
 const scoreboardDiv = document.getElementById('scoreboard');
 const scoreList = document.getElementById('score-list');
+const logo = document.getElementById('logo');
 
 let previousScores = [];
 let score = 0;
@@ -20,6 +22,7 @@ let currentDifficulty = 'easy';
 let activeQuestions = [];
 let currentElement = null;
 let currentAnswer = null;
+
 
 document.querySelectorAll('.difficulty').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -33,6 +36,8 @@ document.querySelectorAll('.difficulty').forEach(btn => {
 
 function startGame() {
     menu.classList.add('hidden');
+    title.classList.add('hidden');
+
     game.classList.remove('hidden');
 
     // reset state
@@ -137,19 +142,43 @@ function generateQuestion(level) {
     let a, b, question, answer;
 
     if (level === 'easy') {
-        // range 0–20, only positive answers
-        a = rand(21);
-        b = rand(21);
-        if (Math.random() < 0.5) {
+        // integers 1–15
+        let a = rand(15) + 1;
+        let b = rand(15) + 1;
+
+        // enforce: at most one operand ≥10
+        if (a >= 10 && b >= 10) {
+            // force b to be single digit
+            b = rand(9) + 1;  // 1–9
+        }
+
+        // choose operator: +, -, * (but * only allowed up to 6×6)
+        const ops = ["+", "-", "*"];
+        let op = ops[rand(3)];
+
+        // if multiplication chosen, enforce <= 6×6
+        if (op === "*" && (a > 6 || b > 6)) {
+            a = rand(6) + 1;   // 1–6
+            b = rand(6) + 1;   // 1–6
+        }
+
+        // build question + answer
+        if (op === "+") {
             question = `${a} + ${b}`;
             answer = a + b;
-        } else {
-            // ensure positive result for subtraction
+
+        } else if (op === "-") {
+            // ensure positive result
             if (b > a) [a, b] = [b, a];
             question = `${a} - ${b}`;
             answer = a - b;
+
+        } else { // "*"
+            question = `${a} × ${b}`;
+            answer = a * b;
         }
     }
+
 
     else if (level === 'medium') {
         // helper for inclusive random integers
@@ -232,6 +261,36 @@ function generateQuestion(level) {
 }
 
 
+answerInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+
+        // clear input field
+        answerInput.value = '';
+
+        if (currentElement) {
+            // fade out
+            currentElement.style.opacity = '0.4';
+            currentElement.classList.remove('current');
+
+            // remove from active list
+            activeQuestions = activeQuestions.filter(q => q !== currentElement);
+
+            // remove from DOM
+            currentElement.remove();
+        }
+
+        // if all cleared: spawn a new one immediately
+        if (activeQuestions.length === 0 && timeLeft > 0) {
+            spawnQuestion(currentDifficulty);
+        }
+
+        // pick next
+        pickNext();
+    }
+});
+
+
 
 function updateScore() {
     scoreDisplay.textContent = `Score: ${score}`;
@@ -259,6 +318,7 @@ function endGame() {
 
     game.classList.add('hidden');
     menu.classList.remove('hidden');
+    title.classList.remove('hidden');
 }
 
 
@@ -271,3 +331,143 @@ function updateScoreboard() {
         .join('');
 }
 
+
+// ============================================
+// SQUAT APP
+// ============================================
+
+const squatMenu = document.getElementById('squat-menu');
+const squatGame = document.getElementById('squat-game');
+const squatTimerSetting = document.getElementById('squat-timer-setting');
+const squatTimerDisplay = document.getElementById('squat-timer-display');
+const squatBeatDisplay = document.getElementById('squat-beat-display');
+const squatCue = document.getElementById('squat-cue');
+const squatScoreboardDiv = document.getElementById('squat-scoreboard');
+const squatScoreList = document.getElementById('squat-score-list');
+
+let squatPreviousScores = [];
+let squatInterval;
+let squatTimeLeft = 60;
+let squatCurrentDifficulty = 'easy';
+let squatCurrentTimerLength = 60;
+let squatBPM = 40;
+let squatCount = 0;
+let squatBeatInterval;
+
+logo.addEventListener('click', () => {
+    // Check if math game is active
+    if (!game.classList.contains('hidden')) {
+        endGame();
+    }
+    // Check if squat game is active
+    if (!squatGame.classList.contains('hidden')) {
+        endSquatGame();
+    }
+});
+
+// Difficulty to BPM mapping
+const bpmByLevel = {
+    easy: 20,
+    medium: 35,
+    hard: 50
+};
+
+document.querySelectorAll('.squat-difficulty').forEach(btn => {
+    btn.addEventListener('click', () => {
+        squatCurrentDifficulty = btn.dataset.level;
+        squatCurrentTimerLength = parseInt(squatTimerSetting.value, 10) || 60;
+        squatBPM = bpmByLevel[squatCurrentDifficulty];
+        startSquatGame();
+    });
+});
+
+function startSquatGame() {
+    menu.classList.add('hidden');
+    title.classList.add('hidden');
+    squatGame.classList.remove('hidden');
+
+    // Reset state
+    squatTimeLeft = squatCurrentTimerLength;
+    squatCount = 0;
+    updateSquatTimer();
+    updateSquatBeat();
+
+    // Show ready message
+    squatCue.textContent = 'Prêt';
+    squatCue.style.color = '#E2001A';
+
+    // Start countdown timer
+    squatInterval = setInterval(() => {
+        squatTimeLeft--;
+        updateSquatTimer();
+        if (squatTimeLeft <= 0) endSquatGame();
+    }, 1000);
+
+    // Start beat cues
+    const beatInterval = 60000 / squatBPM; // milliseconds per beat
+    let isDown = true;
+
+    squatBeatInterval = setInterval(() => {
+        squatCount++;
+        if (isDown) {
+            squatCue.textContent = '⬇ DESCENDS';
+            squatCue.style.color = '#E2001A';
+        } else {
+            squatCue.textContent = '⬆ MONTE';
+            squatCue.style.color = '#ffffff';
+        }
+        isDown = !isDown;
+
+        // Flash effect
+        squatCue.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+            squatCue.style.transform = 'scale(1)';
+        }, 100);
+    }, beatInterval);
+}
+
+function updateSquatTimer() {
+    squatTimerDisplay.textContent = `Temps: ${squatTimeLeft}`;
+}
+
+function updateSquatBeat() {
+    squatBeatDisplay.textContent = `Rythme: ${squatBPM} BPM`;
+}
+
+function endSquatGame() {
+    clearInterval(squatInterval);
+    clearInterval(squatBeatInterval);
+
+    squatCue.textContent = 'Terminé!';
+    squatCue.style.color = '#E2001A';
+
+    // Calculate total squats (count / 2 since we count both down and up)
+    const totalSquats = Math.floor(squatCount / 2);
+
+    squatPreviousScores.unshift({
+        level: squatCurrentDifficulty,
+        squats: totalSquats,
+        timer: squatCurrentTimerLength,
+        bpm: squatBPM,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    if (squatPreviousScores.length > 5) squatPreviousScores.pop();
+
+    updateSquatScoreboard();
+
+    // Return to menu after 2 seconds
+    setTimeout(() => {
+        squatGame.classList.add('hidden');
+        menu.classList.remove('hidden');
+        title.classList.remove('hidden');
+    }, 2000);
+}
+
+function updateSquatScoreboard() {
+    squatScoreboardDiv.classList.remove('hidden');
+    squatScoreList.innerHTML = squatPreviousScores
+        .map(s =>
+            `<li>${s.time} – <span class="text-epflRed">${s.level}</span> (${s.timer}s, ${s.bpm} BPM): ${s.squats} squats</li>`
+        )
+        .join('');
+}
